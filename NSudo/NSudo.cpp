@@ -472,7 +472,7 @@ int main()
 	{
 		DWORD result;
 		//WriteConsoleW(g_hOut, ProjectInfo::VersionText, (DWORD)wcslen(ProjectInfo::VersionText), &result, nullptr);
-		//WriteConsoleW(g_hOut, L"\n", (DWORD)wcslen(L"\n"), &result, nullptr);
+		WriteConsoleW(g_hOut, L"\n", (DWORD)wcslen(L""), &result, nullptr);
 
 		//SuMUIPrintMsg(g_hInstance, NULL, IDS_ABOUT);
 
