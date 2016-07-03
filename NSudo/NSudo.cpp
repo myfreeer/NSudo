@@ -316,9 +316,6 @@ HRESULT SuShowAboutDialog(
 	tdConfig.pszFooterIcon = TD_INFORMATION_ICON;
 	tdConfig.pszFooter = 
 		L"<a href=\""
-		L"http://shang.qq.com/wpa/qunwpa?idkey=29940ed5c8b2363efcf8a1c376f280c4a46c4e356d5533af48541418ff13ada2"
-		L"\">官方群(Offical QQ Group): 466078631</a>\r\n"
-		L"<a href=\""
 		L"https://m2team.github.io/NSudo"
 		L"\">项目首页(Project Site): https://m2team.github.io/NSudo</a>";
 	tdConfig.pszExpandedControlText = MAKEINTRESOURCE(IDS_ABOUT_FOOTERTITLE);
@@ -490,7 +487,7 @@ int main()
 		for (int i = 1; i < g_argc; i++)
 		{
 			//判断是参数还是要执行的命令行或常见任务
-			if (bCMDLineArgEnable)
+			if (g_argv[i][0] == L'-' || g_argv[i][0] == L'/')
 			{
 				//如果未提权且参数不是显示帮助
 				if (!bElevated && g_argv[i][1] != '?')
@@ -544,11 +541,7 @@ int main()
 							}
 							break;
 						default:
-							if (g_pNSudo->ImpersonateAsSystem())
-							{
-								g_pNSudo->GetTrustedInstallerToken(&pToken);
-								RevertToSelf();
-							}
+							bArgErr = true;
 							break;
 						}
 					}
@@ -572,7 +565,7 @@ int main()
 								pToken->SetPrivilege(RemoveMost);
 								break;
 							default:
-								pToken->SetPrivilege(EnableAll);
+								bArgErr = true;
 								break;
 							}
 						}
@@ -605,7 +598,6 @@ int main()
 								pToken->SetIL(IntegrityLevel::Low);
 								break;
 							default:
-								Token->SetIL(IntegrityLevel::System);
 								bArgErr = true;
 								break;
 							}
