@@ -474,10 +474,10 @@ int main()
 	else
 	{
 		DWORD result;
-		WriteConsoleW(g_hOut, ProjectInfo::VersionText, (DWORD)wcslen(ProjectInfo::VersionText), &result, nullptr);
-		WriteConsoleW(g_hOut, L"\n", (DWORD)wcslen(L"\n"), &result, nullptr);
+		//WriteConsoleW(g_hOut, ProjectInfo::VersionText, (DWORD)wcslen(ProjectInfo::VersionText), &result, nullptr);
+		//WriteConsoleW(g_hOut, L"\n", (DWORD)wcslen(L"\n"), &result, nullptr);
 
-		SuMUIPrintMsg(g_hInstance, NULL, IDS_ABOUT);
+		//SuMUIPrintMsg(g_hInstance, NULL, IDS_ABOUT);
 
 		bool bCMDLineArgEnable = true;
 		bool bArgErr = false;
@@ -490,7 +490,7 @@ int main()
 		for (int i = 1; i < g_argc; i++)
 		{
 			//判断是参数还是要执行的命令行或常见任务
-			if (g_argv[i][0] == L'-' || g_argv[i][0] == L'/')
+			if (bCMDLineArgEnable)
 			{
 				//如果未提权且参数不是显示帮助
 				if (!bElevated && g_argv[i][1] != '?')
@@ -544,7 +544,11 @@ int main()
 							}
 							break;
 						default:
-							bArgErr = true;
+							if (g_pNSudo->ImpersonateAsSystem())
+							{
+								g_pNSudo->GetTrustedInstallerToken(&pToken);
+								RevertToSelf();
+							}
 							break;
 						}
 					}
@@ -568,7 +572,7 @@ int main()
 								pToken->SetPrivilege(RemoveMost);
 								break;
 							default:
-								bArgErr = true;
+								pToken->SetPrivilege(EnableAll);
 								break;
 							}
 						}
@@ -601,6 +605,7 @@ int main()
 								pToken->SetIL(IntegrityLevel::Low);
 								break;
 							default:
+								Token->SetIL(IntegrityLevel::System);
 								bArgErr = true;
 								break;
 							}
