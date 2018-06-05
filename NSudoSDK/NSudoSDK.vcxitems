@@ -3,11 +3,7 @@
   <PropertyGroup Label="Globals">
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
     <HasSharedItems>true</HasSharedItems>
-    <ItemsProjectGuid>{45d41acc-2c3c-43d2-bc10-02aa73ffc7c7}</ItemsProjectGuid>
-    <ItemsSccProjectName>SAK</ItemsSccProjectName>
-    <ItemsSccAuxPath>SAK</ItemsSccAuxPath>
-    <ItemsSccLocalPath>SAK</ItemsSccLocalPath>
-    <ItemsSccProvider>SAK</ItemsSccProvider>
+    <ItemsProjectGuid>{864f35b9-789c-4da9-8906-649dfe3705f7}</ItemsProjectGuid>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -18,10 +14,77 @@
     <ProjectCapability Include="SourceItemsFromImports" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(MSBuildThisFileDirectory)M2.Base.hpp" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)M2.BaseLib.hpp" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)M2.NSudo.hpp" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)NativeLib.hpp" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)WinStationLib.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)CIBuild.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)M2BaseHelpers.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)M2DPIScaling.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)M2MessageDialog.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)M2Object.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)NSudoAPI.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)NSudoContextMenuManagement.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)M2ResourceManagement.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)NSudoResourceManagement.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)NSudoVersion.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)M2MessageDialogResource.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)NSudoContextMenuManagementResource.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)NSudoResourceManagementResource.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\allocators.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\document.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\encodedstream.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\encodings.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\error\en.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\error\error.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\filereadstream.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\filewritestream.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\fwd.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\internal\biginteger.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\internal\diyfp.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\internal\dtoa.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\internal\ieee754.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\internal\itoa.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\internal\meta.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\internal\pow10.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\internal\regex.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\internal\stack.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\internal\strfunc.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\internal\strtod.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\internal\swap.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\istreamwrapper.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\memorybuffer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\memorystream.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\msinttypes\inttypes.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\msinttypes\stdint.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\ostreamwrapper.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\pointer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\prettywriter.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\rapidjson.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\reader.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\schema.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\stream.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\stringbuffer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThirdParty\rapidjson\writer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)Resources\en\CommandLineHelp.txt" />
+    <Text Include="$(MSBuildThisFileDirectory)Resources\en\Links.txt" />
+    <Text Include="$(MSBuildThisFileDirectory)Resources\zh-Hans\CommandLineHelp.txt" />
+    <Text Include="$(MSBuildThisFileDirectory)Resources\zh-Hans\Links.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)NSudoContextMenuManagement.json" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\en\Translations.json" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\zh-Hans\Translations.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)M2BaseHelpers.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)M2DPIScaling.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)M2MessageDialog.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)NSudoContextMenuManagement.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)M2ResourceManagement.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)NSudoResourceManagement.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="$(MSBuildThisFileDirectory)M2MessageDialogResource.rc" />
+    <ResourceCompile Include="$(MSBuildThisFileDirectory)NSudoContextMenuManagementResource.rc" />
+    <ResourceCompile Include="$(MSBuildThisFileDirectory)NSudoResourceManagementResource.rc" />
   </ItemGroup>
 </Project>

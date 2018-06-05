@@ -3,140 +3,50 @@
 
 #include "stdafx.h"
 
-using namespace M2;
+#include "NSudoVersion.h"
 
-HINSTANCE g_hInstance;
+#include "M2DPIScaling.h"
+#include "M2MessageDialog.h"
+#include "NSudoResourceManagement.h"
 
-HANDLE g_hOut;
-HANDLE g_hIn;
-HANDLE g_hErr;
+#include "M2BaseHelpers.h"
 
-wchar_t g_AppPath[260];
-wchar_t g_ShortCutListPath[260];
-
-int g_argc;
-wchar_t** g_argv;
-
-bool g_GUIMode;
-
-CNSudo *g_pNSudo = nullptr;
-
-namespace ProjectInfo
-{
-	wchar_t VersionText[] = L"NSudo 4.0 (Build 1607)";
-}
-
-bool SuCreateProcess(
-	_In_opt_ HANDLE hToken,
-	_Inout_ LPWSTR lpCommandLine)
-{
-	bool bRet = true;
-
-	const DWORD dwFlags = CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT;
-
-	STARTUPINFOW StartupInfo = { 0 };
-	PROCESS_INFORMATION ProcessInfo = { 0 };
-	wchar_t szBuf[512], szSystemDirectory[260];
-
-	//设置进程所在桌面
-	StartupInfo.lpDesktop = L"WinSta0\\Default";
-
-	//获取系统目录
-	GetSystemDirectoryW(szSystemDirectory, 260);
-
-	//生成命令行	
-	wsprintfW(szBuf,
-		L"%s\\cmd.exe /c start \"%s\\cmd.exe\" %s",
-		szSystemDirectory, szSystemDirectory, lpCommandLine);
-
-	//启动进程
-	if (!CreateProcessAsUserW(
-		hToken, 
-		nullptr, 
-		szBuf,
-		nullptr,
-		nullptr,
-		FALSE, 
-		dwFlags,
-		nullptr,
-		g_AppPath, 
-		&StartupInfo,
-		&ProcessInfo))
-	{
-		if (!CreateProcessWithTokenW(
-			hToken,
-			LOGON_WITH_PROFILE, 
-			nullptr,
-			szBuf,
-			dwFlags,
-			nullptr, 
-			g_AppPath, 
-			&StartupInfo,
-			&ProcessInfo))
-		{
-			bRet = false;
-		}
-	}
-
-	//关闭句柄
-	if (bRet)
-	{
-		NtClose(ProcessInfo.hProcess);
-		NtClose(ProcessInfo.hThread);
-	}
-
-	//返回结果
-	return bRet;
-}
-
-void SuInitialize()
-{
-	g_hInstance = GetModuleHandleW(NULL);
-
-	g_hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-	g_hIn = GetStdHandle(STD_INPUT_HANDLE);
-	g_hErr = GetStdHandle(STD_ERROR_HANDLE);
-
-	g_argv = CommandLineToArgvW(GetCommandLineW(), &g_argc);
-
-	GetModuleFileNameW(NULL, g_AppPath, 260);
-	wcsrchr(g_AppPath, L'\\')[0] = NULL;
-
-	wcscpy_s(g_ShortCutListPath, 260, g_AppPath);
-	wcscat_s(g_ShortCutListPath, 260, L"\\ShortCutList.ini");
-
-	g_GUIMode = (g_argc == 1);
-
-	g_pNSudo = new CNSudo();
-}
-
-void SuMUIPrintMsg(
+void NSudoPrintMsg(
 	_In_opt_ HINSTANCE hInstance,
 	_In_opt_ HWND hWnd,
-	_In_ UINT uID)
+	_In_ LPCWSTR lpContent)
 {
-	DWORD result;
-	CPtr<wchar_t*> szBuffer;
-	if (szBuffer.Alloc(2048 * sizeof(wchar_t)))
-	{
-		LoadStringW(hInstance, uID, szBuffer, 2048);
-		if (g_GUIMode) TaskDialog(
-			hWnd, hInstance, L"NSudo", nullptr, szBuffer, 0, nullptr, nullptr);
-		else WriteConsoleW(g_hOut, szBuffer, (DWORD)wcslen(szBuffer), &result, nullptr);
-	}
+	std::wstring DialogContent =
+		g_ResourceManagement.GetLogoText() +
+		lpContent +
+		g_ResourceManagement.GetUTF8WithBOMStringResources(IDR_String_Links);
+
+	M2MessageDialog(
+		hInstance,
+		hWnd,
+		MAKEINTRESOURCE(IDI_NSUDO),
+		L"NSudo",
+		DialogContent.c_str());
 }
 
-void SuMUIInsComboBox(
-	_In_opt_ HINSTANCE hInstance,
-	_In_opt_ HWND hWnd,
-	_In_ UINT uID)
+HRESULT NSudoShowAboutDialog(
+	_In_ HWND hwndParent)
 {
-	CPtr<wchar_t*> szBuffer;
-	if (szBuffer.Alloc(260 * sizeof(wchar_t)))
-	{
-		LoadStringW(hInstance, uID, szBuffer, 260);
-		SendMessageW(hWnd, CB_INSERTSTRING, 0, (LPARAM)(wchar_t*)szBuffer);
-	}
+	std::wstring DialogContent =
+		g_ResourceManagement.GetLogoText() +
+		g_ResourceManagement.GetUTF8WithBOMStringResources(IDR_String_CommandLineHelp) +
+		g_ResourceManagement.GetUTF8WithBOMStringResources(IDR_String_Links);
+
+	SetLastError(ERROR_SUCCESS);
+
+	M2MessageDialog(
+		g_ResourceManagement.Instance,
+		hwndParent,
+		MAKEINTRESOURCE(IDI_NSUDO),
+		L"NSudo",
+		DialogContent.c_str());
+
+	return M2GetLastError();
 }
 
 void NSudoBrowseDialog(
@@ -155,513 +65,434 @@ void NSudoBrowseDialog(
 	GetOpenFileNameW(&ofn);
 }
 
-bool SuMUICompare(
-	_In_opt_ HINSTANCE hInstance,
-	_In_ UINT uID,
-	_In_ LPCWSTR lpText)
+#include <ShellScalingApi.h>
+
+inline HRESULT GetDpiForMonitorInternal(
+	_In_ HMONITOR hmonitor,
+	_In_ MONITOR_DPI_TYPE dpiType,
+	_Out_ UINT *dpiX,
+	_Out_ UINT *dpiY)
 {
-	bool bRet = false;
-	CPtr<wchar_t*> szBuffer;
-	if (szBuffer.Alloc(2048 * sizeof(wchar_t)))
-	{
-		LoadStringW(hInstance, uID, szBuffer, 2048);		
-		bRet = (_wcsicmp(szBuffer, lpText) == 0);
-	}
-	return bRet;
-}
+	HMODULE hModule = nullptr;
+	decltype(GetDpiForMonitor)* pFunc = nullptr;
+	HRESULT hr = E_NOINTERFACE;
 
+	hModule = LoadLibraryW(L"SHCore.dll");
+	if (!hModule) return M2GetLastError();
 
-void SuGUIRun(
-	_In_ HWND hDlg,
-	_In_ LPCWSTR szUser,
-	_In_ LPCWSTR szPrivilege,
-	_In_ LPCWSTR szMandatory,
-	_In_ LPCWSTR szCMDLine)
-{
-	if (_wcsicmp(L"", szCMDLine) == 0)
-	{
-		SuMUIPrintMsg(g_hInstance, hDlg, IDS_ERRTEXTBOX);
-	}
-	else
-	{
-		wchar_t szBuffer[512] = { NULL };
+	pFunc = (decltype(pFunc))GetProcAddress(hModule, "GetDpiForMonitor");
+	if (!pFunc) return M2GetLastError();
 
-		wchar_t szPath[260];
-		GetPrivateProfileStringW(
-			szCMDLine, L"CommandLine", L"", szPath, 260, g_ShortCutListPath);
+	hr = pFunc(hmonitor, dpiType, dpiX, dpiY);
 
-		if (wcscmp(szPath, L"") != 0)
-		{
-			wcscat_s(szBuffer, 512, szPath);
-		}
-		else
-		{
-			wcscat_s(szBuffer, 512, szCMDLine);
-		}
-
-		CToken *pToken = nullptr;
-		CToken *pTempToken = nullptr;
-
-		if (SuMUICompare(g_hInstance,IDS_TI,szUser))
-		{
-			if (g_pNSudo->ImpersonateAsSystem())
-			{
-				g_pNSudo->GetTrustedInstallerToken(&pToken);
-				RevertToSelf();
-			}
-		}
-		else if (SuMUICompare(g_hInstance, IDS_SYSTEM, szUser))
-		{
-			g_pNSudo->GetSystemToken(&pToken);
-		}
-		else if (SuMUICompare(g_hInstance, IDS_CURRENTPROCESS, szUser))
-		{
-			g_pNSudo->GetCurrentToken(&pToken);
-		}
-		else if (SuMUICompare(g_hInstance, IDS_CURRENTUSER, szUser))
-		{
-			if (g_pNSudo->ImpersonateAsSystem())
-			{
-				g_pNSudo->GetCurrentUserToken(M2GetCurrentSessionID(), &pToken);
-				RevertToSelf();
-			}
-		}
-		else if (SuMUICompare(g_hInstance, IDS_CURRENTPROCESSDROP, szUser))
-		{
-			if (g_pNSudo->GetCurrentToken(&pTempToken))
-			{
-				pToken->MakeLUA(&pToken);
-				delete pTempToken;
-			}
-		}
-
-		if (pToken)
-		{
-			if (SuMUICompare(g_hInstance, IDS_ENABLEALL, szPrivilege))
-			{
-				pToken->SetPrivilege(EnableAll);
-			}
-			else if (SuMUICompare(g_hInstance, IDS_REMOVEMAX, szPrivilege))
-			{
-				pToken->SetPrivilege(RemoveMost);
-			}
-
-			if (SuMUICompare(g_hInstance, IDS_ILLOW, szMandatory))
-			{
-				pToken->SetIL(IntegrityLevel::Low);
-			}
-			else if (SuMUICompare(g_hInstance, IDS_ILMEDIUM, szMandatory))
-			{
-				pToken->SetIL(IntegrityLevel::Medium);
-			}
-			else if (SuMUICompare(g_hInstance, IDS_ILHIGH, szMandatory))
-			{
-				pToken->SetIL(IntegrityLevel::High);
-			}
-			else if (SuMUICompare(g_hInstance, IDS_ILSYSTEM, szMandatory))
-			{
-				pToken->SetIL(IntegrityLevel::System);
-			}
-		}
-
-		if (g_pNSudo->ImpersonateAsSystem())
-		{
-			if (!SuCreateProcess(*pToken, szBuffer))
-			{
-				SuMUIPrintMsg(g_hInstance, NULL, IDS_ERRSUDO);
-			}
-
-			RevertToSelf();
-		}
-
-		if (pToken) delete pToken;
-	}
-}
-
-HRESULT CALLBACK SuAboutDialogCallback(
-	HWND hWnd,
-	UINT uNotification,
-	WPARAM wParam,
-	LPARAM lParam,
-	LONG_PTR dwRefData)
-{
-	HRESULT hr = S_OK;
-
-	switch (uNotification)
-	{
-	case TDN_HYPERLINK_CLICKED:
-		ShellExecuteW(hWnd, L"open", (LPCWSTR)lParam, nullptr, nullptr, SW_SHOW);
-		break;
-	}
+	FreeLibrary(hModule);
 
 	return hr;
 }
 
-HRESULT SuShowAboutDialog(
-	_In_ HWND hwndParent,
-	_In_ HINSTANCE hInstance)
+class CNSudoMainWindow
 {
-	TASKDIALOGCONFIG tdConfig;
-	memset(&tdConfig, 0, sizeof(tdConfig));
+private:
+	static INT_PTR CALLBACK s_DialogProc(
+		_In_ HWND hDlg,
+		_In_ UINT uMsg,
+		_In_ WPARAM wParam,
+		_In_ LPARAM lParam);
 
-	tdConfig.cbSize = sizeof(TASKDIALOGCONFIG);
-	tdConfig.hwndParent = hwndParent;
-	tdConfig.hInstance = hInstance;
-	tdConfig.pfCallback = SuAboutDialogCallback;
-	tdConfig.cxWidth = 240;
-	tdConfig.pszWindowTitle = L"NSudo";
-	tdConfig.pszMainIcon = MAKEINTRESOURCE(IDI_NSUDO);
-	tdConfig.pszMainInstruction = ProjectInfo::VersionText;
-	tdConfig.pszContent = MAKEINTRESOURCE(IDS_ABOUT);
-	tdConfig.pszFooterIcon = TD_INFORMATION_ICON;
-	tdConfig.pszFooter = 
-		L"<a href=\""
-		L"https://m2team.github.io/NSudo"
-		L"\">项目首页(Project Site): https://m2team.github.io/NSudo</a>";
-	tdConfig.pszExpandedControlText = MAKEINTRESOURCE(IDS_ABOUT_FOOTERTITLE);
-	tdConfig.pszExpandedInformation = MAKEINTRESOURCE(IDS_HELP);
-	tdConfig.dwFlags = TDF_ALLOW_DIALOG_CANCELLATION |TDF_ENABLE_HYPERLINKS | TDF_EXPAND_FOOTER_AREA;
+private:
+	HICON m_hNSudoIcon = nullptr;
+	HICON m_hWarningIcon = nullptr;
 
-	return TaskDialogIndirect(&tdConfig, nullptr, nullptr, nullptr);
+	int m_xDPI = USER_DEFAULT_SCREEN_DPI;
+	int m_yDPI = USER_DEFAULT_SCREEN_DPI;
+
+	HINSTANCE m_hInstance;
+
+	HWND m_hUserName = nullptr;
+	HWND m_hCheckBox = nullptr;
+	HWND m_hszPath = nullptr;
+
+private:
+	INT_PTR DialogProc(
+		_In_ HWND hDlg,
+		_In_ UINT uMsg,
+		_In_ WPARAM wParam,
+		_In_ LPARAM lParam);
+
+public:
+	CNSudoMainWindow(HINSTANCE hInstance = nullptr);
+	~CNSudoMainWindow();
+
+	INT_PTR Show();
+};
+
+CNSudoMainWindow::CNSudoMainWindow(HINSTANCE hInstance) :
+	m_hInstance(hInstance)
+{
 }
 
-
-INT_PTR CALLBACK DialogCallBack(
-	HWND hDlg, 
-	UINT message,
-	WPARAM wParam,
-	LPARAM lParam)
+CNSudoMainWindow::~CNSudoMainWindow()
 {
-	HWND hUserName = GetDlgItem(hDlg, IDC_UserName);
-	HWND hTokenPrivilege = GetDlgItem(hDlg, IDC_TokenPrivilege);
-	HWND hMandatoryLabel = GetDlgItem(hDlg, IDC_MandatoryLabel);
-	HWND hszPath = GetDlgItem(hDlg, IDC_szPath);
+}
 
-	wchar_t szCMDLine[260], szUser[260], szPrivilege[260], szMandatory[260], szBuffer[512];
-	
-	switch (message)
+INT_PTR CNSudoMainWindow::s_DialogProc(
+	_In_ HWND hDlg,
+	_In_ UINT uMsg,
+	_In_ WPARAM wParam,
+	_In_ LPARAM lParam)
+{
+	CNSudoMainWindow* pThis = nullptr;
+
+	if (uMsg == WM_INITDIALOG)
+	{
+		pThis = reinterpret_cast<CNSudoMainWindow*>(lParam);
+
+		SetWindowLongPtrW(hDlg, DWLP_USER,
+			reinterpret_cast<LONG_PTR>(pThis));
+	}
+	else
+	{
+		pThis = reinterpret_cast<CNSudoMainWindow*>(
+			GetWindowLongPtrW(hDlg, DWLP_USER));
+	}
+
+	if (pThis)
+	{
+		return pThis->DialogProc(hDlg, uMsg, wParam, lParam);
+	}
+
+	return FALSE;
+}
+
+INT_PTR CNSudoMainWindow::Show()
+{
+	M2EnablePerMonitorDialogScaling();
+
+	ChangeWindowMessageFilter(WM_DROPFILES, MSGFLT_ADD);
+	ChangeWindowMessageFilter(0x0049, MSGFLT_ADD); // WM_COPYGLOBALDATA
+
+	return DialogBoxParamW(
+		this->m_hInstance,
+		MAKEINTRESOURCEW(IDD_NSudoDlg),
+		nullptr,
+		this->s_DialogProc,
+		reinterpret_cast<LPARAM>(this));
+}
+
+void SuGUIRun(
+	_In_ HWND hDlg,
+	_In_ LPCWSTR szUser,
+	_In_ bool bEnableAllPrivileges,
+	_In_ LPCWSTR szCMDLine)
+{
+	if (_wcsicmp(L"", szCMDLine) == 0)
+	{
+		std::wstring Buffer = g_ResourceManagement.GetMessageString(
+			NSUDO_MESSAGE::INVALID_TEXTBOX_PARAMETER);
+		NSudoPrintMsg(g_ResourceManagement.Instance, hDlg, Buffer.c_str());
+	}
+	else
+	{
+		std::vector<std::wstring> result;
+
+		result.push_back(L"NSudo");
+
+		std::wstring Buffer_TI =
+			g_ResourceManagement.GetTranslation("TI");
+		std::wstring Buffer_System =
+			g_ResourceManagement.GetTranslation("System");
+		std::wstring Buffer_CurrentProcess =
+			g_ResourceManagement.GetTranslation("CurrentProcess");
+		std::wstring Buffer_CurrentUser =
+			g_ResourceManagement.GetTranslation("CurrentUser");
+
+		// 获取用户令牌
+		if (_wcsicmp(Buffer_TI.c_str(), szUser) == 0)
+		{
+			result.push_back(L"-U:T");
+		}
+		else if (_wcsicmp(Buffer_System.c_str(), szUser) == 0)
+		{
+			result.push_back(L"-U:S");
+		}
+		else if (_wcsicmp(Buffer_CurrentProcess.c_str(), szUser) == 0)
+		{
+			result.push_back(L"-U:P");
+		}
+		else if (_wcsicmp(Buffer_CurrentUser.c_str(), szUser) == 0)
+		{
+			result.push_back(L"-U:C");
+		}
+
+		// 如果勾选启用全部特权，则尝试对令牌启用全部特权
+		if (bEnableAllPrivileges)
+		{
+			result.push_back(L"-P:E");
+		}
+
+		result.push_back(szCMDLine);
+
+		NSUDO_MESSAGE message = NSudoCommandLineParser(true, true, result);
+		if (NSUDO_MESSAGE::SUCCESS != message)
+		{
+			std::wstring Buffer = g_ResourceManagement.GetMessageString(
+				message);
+			NSudoPrintMsg(
+				g_ResourceManagement.Instance,
+				nullptr,
+				Buffer.c_str());
+		}
+	}
+}
+
+INT_PTR CNSudoMainWindow::DialogProc(
+	_In_ HWND hDlg,
+	_In_ UINT uMsg,
+	_In_ WPARAM wParam,
+	_In_ LPARAM lParam)
+{
+	UNREFERENCED_PARAMETER(lParam);
+
+	switch (uMsg)
 	{
 	case WM_CLOSE:
 		EndDialog(hDlg, 0);
 		break;
 	case WM_INITDIALOG:
-		// Show NSudo Logo
-		SendMessageW(
-			GetDlgItem(hDlg, IDC_NSudoLogo),
-			STM_SETIMAGE,
-			IMAGE_ICON,
-			LPARAM(LoadImageW(
-				g_hInstance,
-				MAKEINTRESOURCE(IDI_NSUDO),
-				IMAGE_ICON,
-				64,
-				64,
-				LR_COPYFROMRESOURCE)));
+	{
+		this->m_hUserName = GetDlgItem(hDlg, IDC_UserName);
+		this->m_hCheckBox = GetDlgItem(hDlg, IDC_Check_EnableAllPrivileges);
+		this->m_hszPath = GetDlgItem(hDlg, IDC_szPath);
 
-		//Show Warning Icon
-		SendMessageW(
-			GetDlgItem(hDlg, IDC_Icon),
-			STM_SETIMAGE,
-			IMAGE_ICON,
-			LPARAM(LoadIconW(NULL, IDI_WARNING)));
+		SetWindowTextW(hDlg, g_ResourceManagement.GetVersionText().c_str());
 
-		SuMUIInsComboBox(g_hInstance, hUserName, IDS_TI);
-		SuMUIInsComboBox(g_hInstance, hUserName, IDS_SYSTEM);
-		SuMUIInsComboBox(g_hInstance, hUserName, IDS_CURRENTPROCESS);
-		SuMUIInsComboBox(g_hInstance, hUserName, IDS_CURRENTUSER);
-		SuMUIInsComboBox(g_hInstance, hUserName, IDS_CURRENTPROCESSDROP);
-		SendMessageW(hUserName, CB_SETCURSEL, 4, 0); //设置默认项"TrustedInstaller"
-
-		SuMUIInsComboBox(g_hInstance, hTokenPrivilege, IDS_DEFAULT);
-		SuMUIInsComboBox(g_hInstance, hTokenPrivilege, IDS_ENABLEALL);
-		SuMUIInsComboBox(g_hInstance, hTokenPrivilege, IDS_REMOVEMAX);
-		SendMessageW(hTokenPrivilege, CB_SETCURSEL, 2, 0); //设置默认项"默认"
-
-		SuMUIInsComboBox(g_hInstance, hMandatoryLabel, IDS_ILLOW);
-		SuMUIInsComboBox(g_hInstance, hMandatoryLabel, IDS_ILMEDIUM);
-		SuMUIInsComboBox(g_hInstance, hMandatoryLabel, IDS_ILHIGH);
-		SuMUIInsComboBox(g_hInstance, hMandatoryLabel, IDS_ILSYSTEM);
-		SuMUIInsComboBox(g_hInstance, hMandatoryLabel, IDS_DEFAULT);
-		SendMessageW(hMandatoryLabel, CB_SETCURSEL, 0, 0); //设置默认项"默认"
-
+		struct { const char* ID; HWND hWnd; } x[] =
 		{
-			wchar_t szItem[260], szBuf[32768];
-			DWORD dwLength = GetPrivateProfileSectionNamesW(szBuf, 32768, g_ShortCutListPath);
+			{ "EnableAllPrivileges" , this->m_hCheckBox },
+		{ "WarningText" , GetDlgItem(hDlg, IDC_WARNINGTEXT) },
+		{ "SettingsGroupText" ,GetDlgItem(hDlg, IDC_SETTINGSGROUPTEXT) },
+		{ "Static.User",GetDlgItem(hDlg, IDC_STATIC_USER) },
+		{ "Static.Open", GetDlgItem(hDlg, IDC_STATIC_OPEN) },
+		{ "Button.About", GetDlgItem(hDlg, IDC_About) },
+		{ "Button.Browse", GetDlgItem(hDlg, IDC_Browse) },
+		{ "Button.Run", GetDlgItem(hDlg, IDC_Run) }
+		};
 
-			for (DWORD i = 0, j = 0; i < dwLength; i++, j++)
+		for (size_t i = 0; i < sizeof(x) / sizeof(x[0]); ++i)
+		{
+			std::wstring Buffer = g_ResourceManagement.GetTranslation(x[i].ID);
+			SetWindowTextW(x[i].hWnd, Buffer.c_str());
+		}
+
+		HRESULT hr = E_FAIL;
+
+		hr = GetDpiForMonitorInternal(
+			MonitorFromWindow(hDlg, MONITOR_DEFAULTTONEAREST),
+			MDT_EFFECTIVE_DPI, (UINT*)&this->m_xDPI, (UINT*)&this->m_yDPI);
+		if (hr != S_OK)
+		{
+			this->m_xDPI = GetDeviceCaps(GetDC(hDlg), LOGPIXELSX);
+			this->m_yDPI = GetDeviceCaps(GetDC(hDlg), LOGPIXELSY);
+		}
+
+		this->m_hNSudoIcon = (HICON)LoadImageW(
+			this->m_hInstance,
+			MAKEINTRESOURCE(IDI_NSUDO),
+			IMAGE_ICON,
+			256,
+			256,
+			LR_SHARED);
+
+		SendMessageW(hDlg, WM_SETICON, ICON_SMALL, (LPARAM)this->m_hNSudoIcon);
+		SendMessageW(hDlg, WM_SETICON, ICON_BIG, (LPARAM)this->m_hNSudoIcon);
+
+		this->m_hWarningIcon = (HICON)LoadImageW(
+			nullptr,
+			IDI_WARNING,
+			IMAGE_ICON,
+			0,
+			0,
+			LR_SHARED);
+
+		const char* UserNameID[] = { "TI" ,"System" ,"CurrentProcess" ,"CurrentUser" };
+		for (size_t i = 0; i < sizeof(UserNameID) / sizeof(*UserNameID); ++i)
+		{
+			std::wstring Buffer = g_ResourceManagement.GetTranslation(UserNameID[i]);
+			SendMessageW(this->m_hUserName, CB_INSERTSTRING, 0, (LPARAM)Buffer.c_str());
+		}
+
+		//设置默认项"TrustedInstaller"
+		SendMessageW(this->m_hUserName, CB_SETCURSEL, 3, 0);
+
+		try
+		{
+			for (std::pair<std::wstring, std::wstring> Item
+				: g_ResourceManagement.ShortCutList)
 			{
-				if (szBuf[i] != L'\0')
-				{
-					szItem[j] = szBuf[i];
-				}
-				else
-				{
-					szItem[j] = L'\0';
-					SendMessageW(hszPath, CB_INSERTSTRING, 0, (LPARAM)szItem);
-					j = (DWORD)-1;				
-				}
+				SendMessageW(
+					this->m_hszPath,
+					CB_INSERTSTRING, 
+					0, 
+					(LPARAM)Item.first.c_str());
 			}
 		}
+		catch (const std::exception&)
+		{
+
+		}
+
 		return (INT_PTR)TRUE;
+	}
+	case WM_PAINT:
+	{
+		HDC hdc = GetDC(hDlg);
+		RECT Rect = { 0 };
+
+		GetClientRect(hDlg, &Rect);
+		DrawIconEx(
+			hdc,
+			MulDiv(16, this->m_xDPI, USER_DEFAULT_SCREEN_DPI),
+			MulDiv(16, this->m_yDPI, USER_DEFAULT_SCREEN_DPI),
+			this->m_hNSudoIcon,
+			MulDiv(64, this->m_xDPI, USER_DEFAULT_SCREEN_DPI),
+			MulDiv(64, this->m_yDPI, USER_DEFAULT_SCREEN_DPI),
+			0,
+			nullptr,
+			DI_NORMAL | DI_COMPAT);
+		DrawIconEx(
+			hdc,
+			MulDiv(16, this->m_xDPI, USER_DEFAULT_SCREEN_DPI),
+			(Rect.bottom - Rect.top) - MulDiv(40, this->m_yDPI, USER_DEFAULT_SCREEN_DPI),
+			this->m_hWarningIcon,
+			MulDiv(24, this->m_xDPI, USER_DEFAULT_SCREEN_DPI),
+			MulDiv(24, this->m_yDPI, USER_DEFAULT_SCREEN_DPI),
+			0,
+			nullptr,
+			DI_NORMAL | DI_COMPAT);
+		ReleaseDC(hDlg, hdc);
+
+		break;
+	}
+	case WM_DPICHANGED:
+	{
+		this->m_xDPI = LOWORD(wParam);
+		this->m_yDPI = HIWORD(wParam);
+
+		break;
+	}
 	case WM_COMMAND:
+	{
 		switch (LOWORD(wParam))
 		{
 		case IDC_Run:
-			GetDlgItemTextW(hDlg, IDC_UserName, szUser, sizeof(szUser));
-			GetDlgItemTextW(hDlg, IDC_TokenPrivilege, szPrivilege, sizeof(szPrivilege));
-			GetDlgItemTextW(hDlg, IDC_MandatoryLabel, szMandatory, sizeof(szMandatory));
-			GetDlgItemTextW(hDlg, IDC_szPath, szCMDLine, sizeof(szCMDLine));
+		{
+			std::wstring username(MAX_PATH, L'\0');
+			std::wstring cmdline(MAX_PATH, L'\0');
 
-			SuGUIRun(hDlg, szUser, szPrivilege, szMandatory, szCMDLine);
+			auto username_length = GetWindowTextW(this->m_hUserName, &username[0], (int)username.size());
+			username.resize(username_length);
+			auto cmdline_length = GetWindowTextW(this->m_hszPath, &cmdline[0], (int)cmdline.size());
+			cmdline.resize(cmdline_length);
+
+			SuGUIRun(
+				hDlg,
+				username.c_str(),
+				(SendMessageW(this->m_hCheckBox, BM_GETCHECK, 0, 0) == BST_CHECKED),
+				cmdline.c_str());
 			break;
+		}
 		case IDC_About:
-			SuShowAboutDialog(hDlg, g_hInstance);
+			NSudoShowAboutDialog(hDlg);
 			break;
-		case IDC_Browse:		
-			szBuffer[1] = L'\0';
-			NSudoBrowseDialog(hDlg, &szBuffer[1]);
+		case IDC_Browse:
+		{
+			std::wstring buffer(MAX_PATH + 2, L'\0');
 
-			if (szBuffer[1] != L'\0')
-			{
-				szBuffer[0] = L'\"';
-				wcscat_s(szBuffer, 512, L"\"");
-				SetDlgItemTextW(hDlg, IDC_szPath, szBuffer);
-			}
+			buffer[0] = L'\"';
+
+			NSudoBrowseDialog(hDlg, &buffer[1]);
+			buffer.resize(wcslen(buffer.c_str()));
+
+			buffer[buffer.size()] = L'\"';
+
+			if (wcslen(buffer.c_str()) > 2)
+				SetWindowTextW(this->m_hszPath, buffer.c_str());
 
 			break;
 		}
+		default:
+			break;
+		}
+
+		break;
+	}
+	case WM_DROPFILES:
+	{
+		std::wstring buffer(MAX_PATH + 2, L'\0');
+
+		buffer[0] = L'\"';
+
+		auto length = DragQueryFileW(
+			(HDROP)wParam, 0, &buffer[1], (int)(buffer.size() - 2));
+		buffer.resize(length + 1);
+
+		if (!(GetFileAttributesW(&buffer[1]) & FILE_ATTRIBUTE_DIRECTORY))
+		{
+			buffer[buffer.size()] = L'\"';
+			SetWindowTextW(this->m_hszPath, buffer.c_str());
+		}
+
+		DragFinish((HDROP)wParam);
+
+		break;
+	}
+	default:
 		break;
 	}
 
-	return 0;
+	return FALSE;
 }
 
-
-int main()
+int WINAPI wWinMain(
+	_In_ HINSTANCE hInstance,
+	_In_opt_ HINSTANCE hPrevInstance,
+	_In_ LPWSTR lpCmdLine,
+	_In_ int nShowCmd)
 {
-	SuInitialize();
+	UNREFERENCED_PARAMETER(hPrevInstance);
+	UNREFERENCED_PARAMETER(lpCmdLine);
+	UNREFERENCED_PARAMETER(nShowCmd);
 
-	bool bElevated = (g_pNSudo->GetAvailableLevel() > 0);
+	CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 
-	if (!g_pNSudo) return 1;
+	std::vector<std::wstring> command_args = 
+		g_ResourceManagement.GetCommandParameters();
 
-	if (g_GUIMode)
+	if (command_args.size() == 1)
 	{
-		if (bElevated)
-		{
-			FreeConsole();
-
-			DialogBoxParamW(
-				g_hInstance,
-				MAKEINTRESOURCEW(IDD_NSudoDlg),
-				nullptr,
-				DialogCallBack,
-				0L);
-		}
-		else
-		{
-			wchar_t szExePath[260];
-
-			GetModuleFileNameW(NULL, szExePath, 260);
-
-			ShellExecuteW(NULL, L"runas", szExePath, NULL, NULL, SW_SHOW);
-			return 0;
-		}
+		CNSudoMainWindow(hInstance).Show();
 	}
 	else
 	{
-		DWORD result;
-		//WriteConsoleW(g_hOut, ProjectInfo::VersionText, (DWORD)wcslen(ProjectInfo::VersionText), &result, nullptr);
-		WriteConsoleW(g_hOut, L"\n", (DWORD)wcslen(L""), &result, nullptr);
-
-		//SuMUIPrintMsg(g_hInstance, NULL, IDS_ABOUT);
-
-		bool bCMDLineArgEnable = true;
-		bool bArgErr = false;
-
-		wchar_t *szBuffer = nullptr;
-
-		CToken *pToken = nullptr;
-		CToken *pTempToken = nullptr;
-
-		for (int i = 1; i < g_argc; i++)
+		NSUDO_MESSAGE message = NSudoCommandLineParser(
+			g_ResourceManagement.IsElevated,
+			true, 
+			command_args);
+		if (NSUDO_MESSAGE::NEED_TO_SHOW_COMMAND_LINE_HELP == message)
 		{
-			//判断是参数还是要执行的命令行或常见任务
-			if (g_argv[i][0] == L'-' || g_argv[i][0] == L'/')
-			{
-				//如果未提权且参数不是显示帮助
-				if (!bElevated && g_argv[i][1] != '?')
-				{
-					SuMUIPrintMsg(g_hInstance, NULL, IDS_ERRNOTHELD);
-					return 0;
-				}
-
-				switch (g_argv[i][1])
-				{
-				case '?':
-					SuMUIPrintMsg(g_hInstance, NULL, IDS_HELP);
-					return 0;
-				case 'U':
-				case 'u':
-				{
-					if (g_argv[i][2] == L':')
-					{
-						switch (g_argv[i][3])
-						{
-						case 'T':
-						case 't':
-							if (g_pNSudo->ImpersonateAsSystem())
-							{
-								g_pNSudo->GetTrustedInstallerToken(&pToken);
-								RevertToSelf();
-							}
-							break;
-						case 'S':
-						case 's':
-							g_pNSudo->GetSystemToken(&pToken);
-							break;
-						case 'C':
-						case 'c':
-							if (g_pNSudo->ImpersonateAsSystem())
-							{
-								g_pNSudo->GetCurrentUserToken(M2GetCurrentSessionID(), &pToken);
-								RevertToSelf();
-							}
-							break;
-						case 'P':
-						case 'p':
-							g_pNSudo->GetCurrentToken(&pToken);
-							break;
-						case 'D':
-						case 'd':
-							if (g_pNSudo->GetCurrentToken(&pTempToken))
-							{
-								pToken->MakeLUA(&pToken);
-								delete pTempToken;
-							}
-							break;
-						default:
-							bArgErr = true;
-							break;
-						}
-					}
-					break;
-				}
-				case 'P':
-				case 'p':
-				{
-					if (pToken)
-					{
-						if (g_argv[i][2] == L':')
-						{
-							switch (g_argv[i][3])
-							{
-							case 'E':
-							case 'e':
-								pToken->SetPrivilege(EnableAll);
-								break;
-							case 'D':
-							case 'd':
-								pToken->SetPrivilege(RemoveMost);
-								break;
-							default:
-								bArgErr = true;
-								break;
-							}
-						}
-					}
-					break;
-				}
-				case 'M':
-				case 'm':
-				{
-					if (pToken)
-					{
-						if (g_argv[i][2] == L':')
-						{
-							switch (g_argv[i][3])
-							{
-							case 'S':
-							case 's':
-								pToken->SetIL(IntegrityLevel::System);
-								break;
-							case 'H':
-							case 'h':
-								pToken->SetIL(IntegrityLevel::High);
-								break;
-							case 'M':
-							case 'm':
-								pToken->SetIL(IntegrityLevel::Medium);
-								break;
-							case 'L':
-							case 'l':
-								pToken->SetIL(IntegrityLevel::Low);
-								break;
-							default:
-								bArgErr = true;
-								break;
-							}
-						}
-					}
-					
-					break;
-				}
-				default:
-					break;
-				}
-			}
-			else
-			{
-				if (bCMDLineArgEnable)
-				{
-					wchar_t szPath[260];
-
-					GetPrivateProfileStringW(
-						g_argv[i], L"CommandLine", L"", szPath, 260, g_ShortCutListPath);
-
-					wcscmp(szPath, L"") != 0 ?
-						szBuffer = szPath : szBuffer = (g_argv[i]);
-
-					if (szBuffer) bCMDLineArgEnable = false;
-				}
-			}
+			NSudoShowAboutDialog(nullptr);
 		}
-
-		if (pToken == nullptr)
+		else if (NSUDO_MESSAGE::SUCCESS != message)
 		{
-			if (g_pNSudo->ImpersonateAsSystem())
-			{
-				if (g_pNSudo->GetTrustedInstallerToken(&pToken))
-				{
-					pToken->SetPrivilege(EnableAll);
-				}
-
-				RevertToSelf();
-			}
-		}
-
-		if (bCMDLineArgEnable || bArgErr)
-		{
-			SuMUIPrintMsg(g_hInstance, NULL, IDS_ERRARG);
+			std::wstring Buffer = g_ResourceManagement.GetMessageString(
+				message);
+			NSudoPrintMsg(
+				g_ResourceManagement.Instance,
+				nullptr,
+				Buffer.c_str());
 			return -1;
 		}
-		else
-		{
-			if (g_pNSudo->ImpersonateAsSystem())
-			{
-				if (!SuCreateProcess(*pToken, szBuffer))
-				{
-					SuMUIPrintMsg(g_hInstance, NULL, IDS_ERRSUDO);
-				}
-				
-				RevertToSelf();
-			}
-		}
-
-		if (pToken) delete pToken;
 	}
-	
-	delete g_pNSudo;
 
 	return 0;
 }

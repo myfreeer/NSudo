@@ -1,79 +1,78 @@
-﻿# 改进日志 Changelog
+﻿# Changelog
 
-**NSudo 4.0**
-- 重写代码，使代码容易使用在其他项目上
-- 采用VC-LTL大幅度减小程序体积
-- 修复命令行解析的一个潜在Bug
-- 在默认快捷命令列表加入host编辑
-- 更换MiniFM图标并集成入NSudo解决方案
-- NSudo项目首页变更
-- 缓解NSudo图形界面的空格问题（浏览功能自动给命令行加引号）
-- 更改图标（感谢 20011010wo）
-- 命令行下新增"/"前缀参数支持,例如: NSudo /U:T /P:E cmd (感谢 th1r5bvn23)
-- 支持默认参数，即以TrustedInstaller令牌且开启全部特权运行 (感谢 老九)
-- 修复弹出文件不存在的问题
-- 使用TaskDialog替代MessageBox
-- 对关于界面进行调整，并在关于界面加入命令行帮助
-- 消除在编译时的警告(/wall和/wx两个参数同时使用)
-- 移除去除C4464, C4668, C4214, C4312警告宏的定义
+- [简体中文](更新日志.md)
 
-**NSudo 2016.1**
-- 修复TrustedInstaller下运行程序界面不显示问题（感谢abbodi1406）
-- 修复命令行解析的漏洞和UI错误（感谢imadlatch）
-- 整理代码，提升可读性
-- 当前目录设为NSudo所在目录（未来会更加灵活）
-- ShortCut实现无限项目
-- 新增简易文件管理器小工具（感谢20011010wo）
+**NSudo 6.1.1804.14**
+- Add VC-LTL support for NSudo release configuration for ARM64.
+  (Thanks to mingkuang.)
+- Add new version of VC-LTL support.
 
-**NSudo 2016**
-- 支持多语言（程序内含简中，繁中，英文，日文）
-- 命令行处理重写
-- 实现代码全部重构；效率更高
+**NSudo 6.0.1804.5**
+- Fix a bug which can cause crash on Windows Vista and Server 2008. 
+  (Thanks to hydra79545.)
+- Share source code with M2-Team UWP projects. (For more information, please 
+  read "https://github.com/Project-Nagisa/Nagisa/blob/master/Changelog.md")
+- Remove useless implementations.
+- Improve the implementation for NSudoStartService function.
+- Use RapidJSON instead of JSON for Modern C++ to reduce the binary size.
 
-**NSudo 3.2 Fix1**
-- 优化程序逻辑；减少无用代码
-- 命令行版和图形版二合一
+**NSudo 6.0.1802.2 v2**
+- Fix always opens a command prompt window after click the run button. 
+  (Thanks to AeonX.)
 
-**NSudo 3.2**
-- 修复无法使用带有空格的路径的问题
-- NSudo和NSudoC单文件化
-- 增加NSudo.bat方便新手准确调用与电脑架构相符的NSudo版本
-- NSudoSDK增加静态库（用NSudo SDK开发的工具可以实现单文件）
-- 编译平台采用Visual Studio 2015 + Windows 10 SDK
+**NSudo 6.0.1802.2**
+- Fix several bugs and improve several implementations.
+- Add two standalone executable files used in different situations.
+  - NSudoC.exe
+    - The pure command line version and subsystem setting is "Console".
+    - Work well in the console, but it has a black console window if you call 
+      it in the non-Console processes.
+    - To ensure the best experience, NSudoC does not support context menu.
+  - NSudoG.exe
+    - The pure command line version and subsystem setting is "Windows"
+    - It can run silently, without a black console window.
+- NSudo will show the message via the M2MessageDialog instead of TaskDialog.
+  - Reasons
+    - NSudo can provide more detail infomation when error because of it have 
+      vertical scroll bar.
+    - You can copy the content in the message dialog.
+    - Support using by the Windows Narrator, so you can use CapsLock+H to read 
+      the content by the Windows Narrator.
+    - The font size is larger than the TaskDialog.
+  - Features of M2MessageDialog
+    - Fully support Per-Monitor DPI Aware in Windows 10 Build 10240 or later.
+    - Fully support Windows Narrator.
+    - You can use the vertical scroll bar and copy the content.
+    - The font size is larger than the TaskDialog.
+    - You can press Enter to close the message dialog.
+  - If you want to use the M2MessageDialog in your project, please download 
+    these files in https://github.com/M2Team/NSudo/tree/master/NSudoSDK
+    - M2DPIScaling.cpp
+    - M2DPIScaling.h
+    - M2MessageDialog.cpp
+    - M2MessageDialog.h
+    - M2MessageDialogResource.h
+    - M2MessageDialogResource.rc
+- Remove Traditional Chinese and Japanese translation because the translation 
+  is out of date and I don't know how to use.
+- Update JSON for Modern C++ to 3.0.1.
+- Context Menu
+  - Add multilingual descriptions.
+  - Add "Enable All Privileges" options for all item in the context menu.
+- Update the command line help and documents.
 
-**NSudo 3.1 Debug**
-- 修复UI的ComboBox不能输入太长文字的问题
-- 修复某些情况下不能使用的问题（由于开发机Windows10的Bug而导致误认为那种方式可行）
-- 增加真正的令牌降权（除了cmd会误显示管理员外；其他的会将其看作普通用户）
-- 增加命令行版本
-- 增加常用列表自定义功能
+**NSudo 6.0.1801.19**
+- Fix the NSudoDuplicateSessionToken function definition bug. 
+  (Thanks to mingkuang.)
+- Fix bugs that cannot enable full privileges under the graphical interface. 
+  (Thanks to abbodi1406.)
+- Fix bugs that cannot use static compile mode when using release configuration
+  for x86 and x86-64 (AMD64) without VC-LTL.
 
-**NSudo 3.0 R2**
-- 修复不能打开其他被系统关联文件的Bug
-- SDK的头文件改进：增加#pragma comment(lib,"NSudoAPI.lib")
-
-**NSudo 3.0**
-- 支持外部应用调用（很抱歉让一些人等太久）
-- 增加了常用调用列表（暂时不支持自定义；未来3.1会加入）
-- 加入了降权功能（当然，是完美降权到UAC未提权前。当然原理不是用获取explorer令牌和创建计划任务）
-- 支持对权限令牌的自定义
-- 界面的完全重构（相对于2.x来说）
-- 代码优化（相对于NSudo 3.0 M1来说）
-- 加入NSudo SDK
-- 原生64位版本
-- 实现了调用外部程序无视WOW64重定向的方法（NSudoCreateProcess）
-- WinPE支持（虽然没起多大作用）
-
-**NSudo 2.1**
-- 实现自动开启所有权限Token
-- 对cmd的调用使用绝对路径，估计可以避免一些不必要的Bug
-- 优化程序代码
-
-**NSudo 2.0**
-- 代码全部使用C++ Win32 SDK重写（程序从692KB缩小到92KB）
-- 提供获取权限的选项
-- 提供命令行参数模式
-- 更换了图标
-
-**NTIShell 1.0**
-- 根据raymai97的超级命令提示符制作的第一个版本
+**NSudo 5.3.1801.11**
+- Fix a potential bug when NSudo obtaining the System Token. 
+  (Thanks to mingkuang.)
+- Provide VC-LTL support for NSudo release configuration for x86 and x86-64 
+  (AMD64). (Thanks to mingkuang.)
+  - PS: Compiling NSudo with VC-LTL can reduce the NSudo's binary size.
+- Maintaining documents.
