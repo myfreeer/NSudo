@@ -935,7 +935,11 @@ extern "C" {
 	{
 		STARTUPINFOW StartupInfo = { 0 };
 		PROCESS_INFORMATION ProcessInfo = { 0 };
-
+StartupInfo.cb = sizeof(STARTUPINFO);
+StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
+StartupInfo.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+StartupInfo.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+StartupInfo.hStdError = GetStdHandle(STD_ERROR_HANDLE);
 		std::wstring ComSpec(MAX_PATH, L'\0');
 		GetEnvironmentVariableW(L"ComSpec", &ComSpec[0], (DWORD)ComSpec.size());
 		ComSpec.resize(wcslen(ComSpec.c_str()));
